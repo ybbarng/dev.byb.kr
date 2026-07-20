@@ -3,6 +3,9 @@
 ybbarng의 개발 공간 — 🧪 Lab과 🎮 Toy를 자유롭게 만들어 굴려보는 곳.
 
 ## 프로젝트
-- [worldcup](./worldcup-2026/) — 🧪 2026 월드컵, 대한민국의 여정 (Elo 50만 회 시뮬레이션 예측·회고)
+- [SET](https://set.byb.kr/) — 🕹️ 보드게임 SET (2016)
+- [GORADOS](https://gorados.byb.kr/) — 🎮 포켓몬GO 지도, 지금은 목업 (2017)
+- [Français Très Facile](https://ftf.byb.kr/) — 🧪 RFI로 프랑스어 학습 (2026)
+- [worldcup-2026](./worldcup-2026/) — 🧪 데이터로 본 2026 월드컵 (2026)
 
 각 프로젝트는 폴더 하나로 추가하고, 홈(`index.html`)에서 Lab/Toy 태그로 분류해 보여줍니다.
