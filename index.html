@@ -7,7 +7,7 @@
 <meta name="description" content="ybbarng의 개발 공간 — Lab과 Toy를 자유롭게 만들어 굴려보는 곳." />
 <style>
   :root{ --bg:#0b0f14; --bg2:#11161f; --line:#1f2733; --txt:#e8eef7; --muted:#8b97a7; --gold:#f5a623;
-    --lab:#6ea8ff; --toy:#7CFC9A; }
+    --lab:#6ea8ff; --toy:#7CFC9A; --game:#c78bff; }
   *{box-sizing:border-box;}
   body{margin:0; background:var(--bg); color:var(--txt);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
@@ -33,6 +33,7 @@
   .badge{font-size:11px; font-weight:800; padding:3px 9px; border-radius:999px; margin-left:auto;}
   .badge.lab{color:#0a1428; background:var(--lab);}
   .badge.toy{color:#06210f; background:var(--toy);}
+  .badge.game{color:#1a0a2e; background:var(--game);}
   .card-title{font-size:17px; font-weight:800; line-height:1.35;}
   .card-desc{color:var(--muted); font-size:13.5px; margin-top:8px;}
   .card-meta{color:#5c6b7d; font-size:12px; margin-top:14px; display:flex; gap:8px; align-items:center;}
@@ -51,6 +52,7 @@
         <button class="fbtn on" data-f="all">전체</button>
         <button class="fbtn" data-f="lab">🧪 Lab</button>
         <button class="fbtn" data-f="toy">🎮 Toy</button>
+        <button class="fbtn" data-f="game">🕹️ Game</button>
       </div>
     </header>
     <main class="grid" id="grid"></main>
@@ -67,19 +69,26 @@
       desc:'FIFA 랭킹 기반 Elo로 32강부터 결승까지 50만 회 시뮬레이션해 매일 예측을 발행하고, 대회가 끝난 뒤 얼마나 맞았는지 지도로 되돌아봅니다.',
       meta:'2026년 6–7월',
     },
+    {
+      href:'https://set.byb.kr/', emoji:'🃏', tag:'game',
+      title:'보드게임 SET',
+      desc:'12장의 카드에서 규칙에 맞는 세 장의 조합(SET)을 먼저 찾는 실시간 패턴 인식 보드게임을 웹으로 옮겼습니다.',
+      meta:'',
+    },
   ];
-  const TAGLABEL = {lab:'🧪 Lab', toy:'🎮 Toy'};
+  const TAGLABEL = {lab:'🧪 Lab', toy:'🎮 Toy', game:'🕹️ Game'};
   const grid = document.getElementById('grid');
   function render(f){
     const list = f==='all' ? PROJECTS : PROJECTS.filter(p=>p.tag===f);
     if(!list.length){ grid.innerHTML = '<div class="empty">아직 여기엔 없어요 — 곧 채워집니다 🌱</div>'; return; }
-    grid.innerHTML = list.map(p=>`
-      <a class="card" href="${p.href}">
+    grid.innerHTML = list.map(p=>{
+      const ext = /^https?:/.test(p.href);
+      return `<a class="card" href="${p.href}"${ext?' target="_blank" rel="noopener"':''}>
         <div class="card-top"><span class="card-emoji">${p.emoji}</span><span class="badge ${p.tag}">${TAGLABEL[p.tag]}</span></div>
         <div class="card-title">${p.title}</div>
         <div class="card-desc">${p.desc}</div>
-        <div class="card-meta"><span>${p.meta}</span><span class="card-go">열기 →</span></div>
-      </a>`).join('');
+        <div class="card-meta"><span>${p.meta||''}</span><span class="card-go">${ext?'바로가기 ↗':'열기 →'}</span></div>
+      </a>`;}).join('');
   }
   document.getElementById('filters').addEventListener('click', e=>{
     const b = e.target.closest('.fbtn'); if(!b) return;
