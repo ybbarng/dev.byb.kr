@@ -22,11 +22,11 @@ dev.byb.kr/
 | 프로젝트 | 태그 | 시점 |
 |---|---|---|
 | [SET](https://set.byb.kr/) — 보드게임 SET | 🕹️ Game | 2016 |
-| [GORADOS](https://gorados.byb.kr/) — 포켓몬GO 지도(목업) | 🎮 Toy | 2017 |
+| [GORADOS](https://gorados.byb.kr/) — 포켓몬GO 지도(목업) | 📦 Archive | 2017 |
 | [tweet-manager](https://github.com/ybbarng/tweet-manager) — 트윗 관리 앱 | 🧪 Lab | 2026 |
 | [Français Très Facile](https://ftf.byb.kr/) — RFI 프랑스어 학습 | 🧪 Lab | 2026 |
-| [Claude Buddy Showcase](https://gh.byb.kr/claude-buddy-showcase/) | 🎮 Toy | 2026 |
-| [worldcup-2026](./worldcup-2026/) — 데이터로 본 2026 월드컵 | 🧪 Lab | 2026 |
+| [Claude Buddy Showcase](https://gh.byb.kr/claude-buddy-showcase/) | 📦 Archive | 2026 |
+| [worldcup-2026](./worldcup-2026/) — 데이터로 본 2026 월드컵 | 📦 Archive | 2026 |
 
 ## 새 프로젝트 추가하기
 
@@ -54,6 +54,7 @@ dev.byb.kr/
 | 🧪 **Lab** | 본격 실험·도구·학습 (데이터 시각화, 신기술 데모 등) |
 | 🎮 **Toy** | 가벼운 창작·서비스·데모 |
 | 🕹️ **Game** | 게임 |
+| 📦 **Archive** | 더 이상 유지보수하지 않는, 지난 프로젝트(보관) |
 
 ## 로컬 확인 · 배포
 

@@ -7,7 +7,7 @@
 <meta name="description" content="ybbarng의 개발 공간 — Lab과 Toy를 자유롭게 만들어 굴려보는 곳." />
 <style>
   :root{ --bg:#0b0f14; --bg2:#11161f; --line:#1f2733; --txt:#e8eef7; --muted:#8b97a7; --gold:#f5a623;
-    --lab:#6ea8ff; --toy:#7CFC9A; --game:#c78bff; }
+    --lab:#6ea8ff; --toy:#7CFC9A; --game:#c78bff; --archive:#c2a878; }
   *{box-sizing:border-box;}
   body{margin:0; background:var(--bg); color:var(--txt);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
@@ -34,6 +34,7 @@
   .badge.lab{color:#0a1428; background:var(--lab);}
   .badge.toy{color:#06210f; background:var(--toy);}
   .badge.game{color:#1a0a2e; background:var(--game);}
+  .badge.archive{color:#2a1f0a; background:var(--archive);}
   .card-title{font-size:17px; font-weight:800; line-height:1.35;}
   .card-desc{color:var(--muted); font-size:13.5px; margin-top:8px;}
   .card-meta{color:#5c6b7d; font-size:12px; margin-top:14px; display:flex; gap:8px; align-items:center;}
@@ -53,6 +54,7 @@
         <button class="fbtn" data-f="lab">🧪 Lab</button>
         <button class="fbtn" data-f="toy">🎮 Toy</button>
         <button class="fbtn" data-f="game">🕹️ Game</button>
+        <button class="fbtn" data-f="archive">📦 Archive</button>
       </div>
     </header>
     <main class="grid" id="grid"></main>
@@ -70,7 +72,7 @@
       meta:'2016년',
     },
     {
-      href:'https://gorados.byb.kr/', emoji:'🗺️', tag:'toy',
+      href:'https://gorados.byb.kr/', emoji:'🗺️', tag:'archive',
       title:'GORADOS · 포켓몬GO 지도',
       desc:'포켓몬GO 포켓스톱·체육관 위치를 지도에 보여주던 서비스. 지금은 목업 데이터로 동작합니다.',
       meta:'2017년 2–3월',
@@ -88,19 +90,19 @@
       meta:'2026년 2월',
     },
     {
-      href:'https://gh.byb.kr/claude-buddy-showcase/', emoji:'🤖', tag:'toy',
+      href:'https://gh.byb.kr/claude-buddy-showcase/', emoji:'🤖', tag:'archive',
       title:'Claude Buddy Showcase',
       desc:'Claude Code와 함께 노는 버디(사운드팩 등)를 모아 보여주는 쇼케이스입니다.',
       meta:'2026년 4월',
     },
     {
-      href:'./worldcup-2026/', emoji:'⚽', tag:'lab',
+      href:'./worldcup-2026/', emoji:'⚽', tag:'archive',
       title:'데이터로 본 2026 월드컵',
       desc:'FIFA 랭킹 기반 Elo로 32강부터 결승까지 50만 회 시뮬레이션해 매일 예측을 발행하고, 대회가 끝난 뒤 얼마나 맞았는지 지도로 되돌아봅니다.',
       meta:'2026년 6–7월',
     },
   ];
-  const TAGLABEL = {lab:'🧪 Lab', toy:'🎮 Toy', game:'🕹️ Game'};
+  const TAGLABEL = {lab:'🧪 Lab', toy:'🎮 Toy', game:'🕹️ Game', archive:'📦 Archive'};
   const grid = document.getElementById('grid');
   function render(f){
     const list = f==='all' ? PROJECTS : PROJECTS.filter(p=>p.tag===f);
