@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>dev · ybbarng</title>
+<meta name="description" content="ybbarng의 개발 공간 — Lab과 Toy를 자유롭게 만들어 굴려보는 곳." />
+<style>
+  :root{ --bg:#0b0f14; --bg2:#11161f; --line:#1f2733; --txt:#e8eef7; --muted:#8b97a7; --gold:#f5a623;
+    --lab:#6ea8ff; --toy:#7CFC9A; }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.6; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:920px; margin:0 auto; padding:0 20px;}
+  header{padding:64px 0 26px; text-align:center;}
+  .logo{font-size:clamp(34px,8vw,54px); font-weight:900; letter-spacing:-1px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+  .logo .br{color:var(--muted); font-weight:600;}
+  .logo .dev{color:var(--gold);}
+  .tagline{color:var(--muted); margin-top:12px; font-size:15px;}
+  .tagline b.lab{color:var(--lab);} .tagline b.toy{color:var(--toy);}
+  .filters{display:flex; gap:8px; justify-content:center; margin:26px 0 8px; flex-wrap:wrap;}
+  .fbtn{font-size:13.5px; font-weight:700; padding:7px 16px; border-radius:999px; cursor:pointer;
+    background:var(--bg2); border:1px solid var(--line); color:var(--muted); transition:.15s;}
+  .fbtn:hover{border-color:#33405e;}
+  .fbtn.on{background:#1c2434; color:#fff; border-color:rgba(245,166,35,.45);}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; padding:22px 0 60px;}
+  .card{display:block; text-decoration:none; color:inherit; background:linear-gradient(180deg,#11161f,#0d1219);
+    border:1px solid var(--line); border-radius:16px; padding:20px; transition:.16s;}
+  .card:hover{border-color:#33405e; transform:translateY(-2px); box-shadow:0 8px 26px rgba(0,0,0,.35);}
+  .card-top{display:flex; align-items:center; gap:10px; margin-bottom:12px;}
+  .card-emoji{font-size:26px;}
+  .badge{font-size:11px; font-weight:800; padding:3px 9px; border-radius:999px; margin-left:auto;}
+  .badge.lab{color:#0a1428; background:var(--lab);}
+  .badge.toy{color:#06210f; background:var(--toy);}
+  .card-title{font-size:17px; font-weight:800; line-height:1.35;}
+  .card-desc{color:var(--muted); font-size:13.5px; margin-top:8px;}
+  .card-meta{color:#5c6b7d; font-size:12px; margin-top:14px; display:flex; gap:8px; align-items:center;}
+  .card-go{margin-left:auto; color:var(--gold); font-weight:700;}
+  .empty{grid-column:1/-1; text-align:center; color:var(--muted); padding:40px 0;}
+  footer{text-align:center; color:#5c6b7d; font-size:13px; padding:30px 0 50px; border-top:1px solid var(--line);}
+  footer a{color:var(--muted);}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo"><span class="dev">dev</span><span class="br">.byb.kr</span></div>
+      <div class="tagline">ybbarng가 이것저것 만들어 굴려보는 공간 — <b class="lab">🧪 Lab</b>과 <b class="toy">🎮 Toy</b></div>
+      <div class="filters" id="filters">
+        <button class="fbtn on" data-f="all">전체</button>
+        <button class="fbtn" data-f="lab">🧪 Lab</button>
+        <button class="fbtn" data-f="toy">🎮 Toy</button>
+      </div>
+    </header>
+    <main class="grid" id="grid"></main>
+    <footer>
+      만든 사람 <a href="https://github.com/ybbarng">@ybbarng</a> · <a href="https://gh.byb.kr">blog</a>
+    </footer>
+  </div>
+<script>
+  // 프로젝트를 추가할 때마다 아래 배열에 한 항목만 넣으면 됩니다.
+  const PROJECTS = [
+    {
+      href:'./worldcup/', emoji:'⚽', tag:'lab',
+      title:'2026 월드컵, 대한민국의 여정',
+      desc:'FIFA 랭킹 기반 Elo로 50만 회 몬테카를로 시뮬레이션. 32강부터 결승까지 예측하고, 대회가 끝난 뒤 얼마나 맞았는지 되돌아봅니다.',
+      meta:'2026 · 시뮬레이션 · 데이터 시각화',
+    },
+  ];
+  const TAGLABEL = {lab:'🧪 Lab', toy:'🎮 Toy'};
+  const grid = document.getElementById('grid');
+  function render(f){
+    const list = f==='all' ? PROJECTS : PROJECTS.filter(p=>p.tag===f);
+    if(!list.length){ grid.innerHTML = '<div class="empty">아직 여기엔 없어요 — 곧 채워집니다 🌱</div>'; return; }
+    grid.innerHTML = list.map(p=>`
+      <a class="card" href="${p.href}">
+        <div class="card-top"><span class="card-emoji">${p.emoji}</span><span class="badge ${p.tag}">${TAGLABEL[p.tag]}</span></div>
+        <div class="card-title">${p.title}</div>
+        <div class="card-desc">${p.desc}</div>
+        <div class="card-meta"><span>${p.meta}</span><span class="card-go">열기 →</span></div>
+      </a>`).join('');
+  }
+  document.getElementById('filters').addEventListener('click', e=>{
+    const b = e.target.closest('.fbtn'); if(!b) return;
+    document.querySelectorAll('.fbtn').forEach(x=>x.classList.toggle('on', x===b));
+    render(b.dataset.f);
+  });
+  render('all');
+</script>
+</body>
+</html>
