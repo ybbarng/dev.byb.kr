@@ -73,13 +73,25 @@
       href:'https://gorados.byb.kr/', emoji:'🗺️', tag:'toy',
       title:'GORADOS · 포켓몬GO 지도',
       desc:'포켓몬GO 포켓스톱·체육관 위치를 지도에 보여주던 서비스. 지금은 목업 데이터로 동작합니다.',
-      meta:'2017년',
+      meta:'2017년 2–3월',
+    },
+    {
+      href:'https://github.com/ybbarng/tweet-manager', emoji:'🐦', tag:'lab',
+      title:'tweet-manager',
+      desc:'트윗을 모아 관리하는 개인용 도구. 아직 웹 화면 없이 코드로만 있습니다.',
+      meta:'2026년 1월',
     },
     {
       href:'https://ftf.byb.kr/', emoji:'🇫🇷', tag:'lab',
       title:'Français Très Facile',
       desc:'RFI의 쉬운 프랑스어 뉴스(Journal en français facile)를 받아, 프랑스어를 조금 더 쉽게 익히도록 돕는 학습 도구입니다.',
-      meta:'2026년',
+      meta:'2026년 2월',
+    },
+    {
+      href:'https://gh.byb.kr/claude-buddy-showcase/', emoji:'🤖', tag:'toy',
+      title:'Claude Buddy Showcase',
+      desc:'Claude Code와 함께 노는 버디(사운드팩 등)를 모아 보여주는 쇼케이스입니다.',
+      meta:'2026년 4월',
     },
     {
       href:'./worldcup-2026/', emoji:'⚽', tag:'lab',
@@ -94,12 +106,12 @@
     const list = f==='all' ? PROJECTS : PROJECTS.filter(p=>p.tag===f);
     if(!list.length){ grid.innerHTML = '<div class="empty">아직 여기엔 없어요 — 곧 채워집니다 🌱</div>'; return; }
     grid.innerHTML = list.map(p=>{
-      const ext = /^https?:/.test(p.href);
+      const ext = /^https?:/.test(p.href), gh = /github\.com/.test(p.href);
       return `<a class="card" href="${p.href}"${ext?' target="_blank" rel="noopener"':''}>
         <div class="card-top"><span class="card-emoji">${p.emoji}</span><span class="badge ${p.tag}">${TAGLABEL[p.tag]}</span></div>
         <div class="card-title">${p.title}</div>
         <div class="card-desc">${p.desc}</div>
-        <div class="card-meta"><span>${p.meta||''}</span><span class="card-go">${ext?'바로가기 ↗':'열기 →'}</span></div>
+        <div class="card-meta"><span>${p.meta||''}</span><span class="card-go">${gh?'GitHub ↗':ext?'바로가기 ↗':'열기 →'}</span></div>
       </a>`;}).join('');
   }
   document.getElementById('filters').addEventListener('click', e=>{
