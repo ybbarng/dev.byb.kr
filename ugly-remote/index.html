@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <title>못생긴 리모컨 · 아카이브</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta charset="utf-8">
+        <meta name="description" content="2018~2022 자체 제작 스마트홈 'ABC'의 웹 리모컨 — 아카이브 데모">
+        <link rel="icon" type="image/png" sizes="32x32" href="./favicon/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="./favicon/favicon-16x16.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="./favicon/apple-touch-icon.png">
+        <meta name="theme-color" content="#5bbad5">
+        <style>
+        /* ===== 아카이브 배너 (원본엔 없던 것, 데모 안내용) ===== */
+        html { background: #eceff1; }
+        .archive-banner {
+            max-width: 360px;
+            margin: 18px auto 0;
+            box-sizing: border-box;
+            background: #263238;
+            color: #cfd8dc;
+            font-size: 12px;
+            line-height: 1.5;
+            padding: 10px 14px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .archive-banner b { color: #5bbad5; }
+        .archive-banner a { color: #80cbc4; }
+
+        /* ===== 이하 2018 원본 그대로 ===== */
+        body {
+            width: 420px;
+            margin: auto;
+            font-family: sans-serif;
+        }
+        header {
+            text-align: center;
+        }
+        #remocon {
+            max-width: 300px;
+            margin: 20px auto;
+            box-sizing: border-box;
+            border: 1px solid #eee;
+            padding: 0 30px;
+            padding-bottom: 10px;
+            background: #fff;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+        }
+        #remocon h3 { margin-bottom: 5px; line-height: 23px; }
+        #remocon .icon { height: 23px; width: 23px; vertical-align: middle; margin-right: 6px; }
+        #remocon .icon.awair { height: 19px; width: 19px; padding: 2px; }
+        #cathy-loading { font-size: 15px; text-align: center; padding: 8px 0 22px 0; }
+        #cathy-error { font-size: 15px; text-align: center; padding: 22px 0; display: none; }
+        #cathy-error .icon { margin-bottom: 5px; margin-right: 0px; }
+        #cathy-data { display: none; }
+        .data { padding: 2px; }
+        .data label { font-size: 10px; text-align: center; }
+        .data .number { font-weight: bold; transition: color 0.7s; }
+        #legend span { transition: transform 0.4s, text-shadow 0.4s; }
+        #legend span:hover { transform: scale(2, 2); text-shadow: 0 3px 6px rgba(0,0,0,0.25), 0 3px 6px rgba(0,0,0,0.22); }
+        .color0 { color: #2EB886; }
+        .color1 { color: #ABA74D; }
+        .color2 { color: #DAA038; }
+        .color3 { color: #BF511C; }
+        .color4 { color: #A30200; }
+        .unit { padding-left: 3px; }
+        .data.major { flex-grow: 1; }
+        .data.major .value .number { font-size: 25px; }
+        .data.minor .value { text-align: center; }
+        .data.minor .value .number { font-size: 15px; }
+        .data .value .unit { font-size: 10px; }
+        .data-head-wrapper { display: flex; align-content: stretch; flex-wrap: wrap; }
+        #legend { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; }
+        .data-body-wrapper { display: flex; align-content: stretch; }
+        .data.minor { width: 59px; }
+        .button-group { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: 10px 0; }
+        button {
+            border: none; border-radius: 2px; color: white; padding: 10px 22px;
+            text-align: center; text-decoration: none; display: inline-block; font-size: 12px;
+            width: 115px; transition: background 0.4s, box-shadow 0.4s; background-position: center;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23); outline: none; cursor: pointer;
+        }
+        button:hover { box-shadow: 0 10px 28px rgba(0,0,0,0.25), 0 6px 10px rgba(0,0,0,0.22); }
+        button.on { background-color: #4CAF4F; }
+        button.on:hover { background: #66BB69 radial-gradient(circle, transparent 1%, #66BB69 1%) center/15000%; }
+        button.on:active { background-color: #A5D6A7; background-size: 100%; transition: background 0s; }
+        button.off { background-color: #E53935; }
+        button.off:hover { background: #EF5350 radial-gradient(circle, transparent 1%, #EF5350 1%) center/15000%; }
+        button.off:active { background-color: #EF9A9A; background-size: 100%; transition: background 0s; }
+        #brice-head { display: flex; flex-direction: row; justify-content: space-between; }
+        #brice-head .name { flex-grow: 1; }
+        #brice-battery { display: none; align-items: center; font-weight: normal; font-size: 10px; }
+        #brice-battery .icon { height: 15px; width: 15px; margin-right: 2px; margin-bottom: 2px; }
+        #brice-battery .unit { padding-left: 2px; }
+        #footnote { display: flex; flex-direction: row; justify-content: center; align-items: center; margin: auto; margin-top: 20px; }
+        figure { margin: 0; text-align: center; }
+        #abc { width: 150px; height: 150px; flex-shrink: 0; }
+        #abc_name { font-size: 12px; text-align: center; }
+        #abc_script { position: relative; margin-right: 30px; margin-left: 30px; text-align: justify; }
+        .quote { font-size: 70px; line-height: 70px; height: 70px; font-family: serif; }
+        .quote.open { position:absolute; top: -10px; left:-30px; }
+        .quote.close { position:absolute; bottom: -65px; right: -30px; }
+        #footer { margin-top: 150px; text-align: center; font-size: 13px; }
+        @media screen and (max-width: 480px) {
+            body { width: 100%; }
+            #abc { width: 100px; height: 100px; }
+        }
+        @media screen and (max-width: 300px) {
+            .data-body-wrapper { flex-wrap: wrap; }
+            #footnote { flex-wrap: wrap; }
+        }
+
+        /* ===== bounceball 스피너 (원본 bounceball.css에서 발췌) ===== */
+        .bounceball { position: relative; display: inline-block; height: 37px; width: 15px; }
+        .bounceball:before {
+            position: absolute; content: ''; display: block; top: 0; width: 15px; height: 15px;
+            border-radius: 50%; background-color: #888; transform-origin: 50%;
+            animation: bounce 500ms alternate infinite ease;
+        }
+        @keyframes bounce {
+            0% { top: 30px; height: 5px; border-radius: 60px 60px 20px 20px; transform: scaleX(2); }
+            35% { height: 15px; border-radius: 50%; transform: scaleX(1); }
+            100% { top: 0; }
+        }
+
+        /* ===== 토스트 (데모 피드백용) ===== */
+        #toast {
+            position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+            background: #263238; color: #fff; font-size: 13px; padding: 11px 18px; border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.35); opacity: 0; pointer-events: none;
+            transition: opacity 0.25s, transform 0.25s; max-width: 88vw; text-align: center; z-index: 50;
+        }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        </style>
+    </head>
+    <body>
+        <div class="archive-banner">
+            📦 <b>아카이브 데모</b> · 2018~2022 자체 제작 스마트홈 <b>ABC</b>의 웹 리모컨.<br>
+            실제 기기와 연결되지 않는 재현본입니다. · <a href="../">← dev.byb.kr</a>
+        </div>
+
+        <div id="remocon">
+            <header>
+                <h2>못생긴 리모컨</h2>
+            </header>
+            <h3><img class="icon" alt="에어컨" src="./icon/air-conditioner.svg" />Audrey</h3>
+            <div class="button-group">
+                <button class="off" id="audrey-off">에어컨 끄기</button>
+                <button class="on" id="audrey-on">에어컨 켜기</button>
+            </div>
+            <div class="button-group">
+                <button class="off" id="audrey-power-off">파워모드 끄기</button>
+                <button class="on" id="audrey-power-on">파워모드 켜기</button>
+            </div>
+
+            <h3 id="brice-head">
+                <div class="name"><img class="icon" alt="전등" src="./icon/lamp.svg" />Brice</div>
+                <div id="brice-battery">
+                    <img class="icon" alt="배터리" src="./icon/battery.svg" />
+                    <span class="number"></span>
+                    <span class="unit">%</span>
+                </div>
+            </h3>
+            <div class="button-group">
+                <button class="off" id="brice-switch-off">모든 전등 끄기</button>
+                <button class="on" id="brice-switch-on">모든 전등 켜기</button>
+            </div>
+            <div class="button-group">
+                <button class="off" id="brice-switch-off-1">방 전등 끄기</button>
+                <button class="on" id="brice-switch-on-1">방 전등 켜기</button>
+            </div>
+            <div class="button-group">
+                <button class="off" id="brice-switch-off-2">복도등 끄기</button>
+                <button class="on" id="brice-switch-on-2">복도등 켜기</button>
+            </div>
+
+            <h3><img class="icon awair" alt="어웨어" src="./icon/awair.svg" />Cathy</h3>
+            <div id="cathy-loading">
+                <div class="bounceball"></div>
+                <div>현재 공기질 데이터를<br> 불러오는 중입니다.</div>
+            </div>
+            <div id="cathy-error">
+                <img class="icon warning" alt="에러" src="./icon/warning.svg"/>
+                <div id="cathy-error-message">공기질 데이터를 불러오는 중에 에러가 발생했습니다.</div>
+            </div>
+            <div id="cathy-data">
+                <div class="data-head-wrapper">
+                    <div class="data major">
+                        <label for="total_score">종합 점수</label>
+                        <div class="value" id="total_score"><span class="number">90</span><span class="unit">점</span></div>
+                    </div>
+                    <div id="legend">
+                        <span class="color4" title="최악">⬤</span>
+                        <span class="color3" title="아주 나쁨">⬤</span>
+                        <span class="color2" title="나쁨">⬤</span>
+                        <span class="color1" title="보통">⬤</span>
+                        <span class="color0" title="좋음">⬤</span>
+                    </div>
+                </div>
+                <div class="data-body-wrapper">
+                    <div class="data minor">
+                        <label for="temperature">온도</label>
+                        <div class="value" id="temperature"><span class="number">90</span><span class="unit">℃</span></div>
+                    </div>
+                    <div class="data minor">
+                        <label for="humidity">습도</label>
+                        <div class="value" id="humidity"><span class="number">90</span><span class="unit">%</span></div>
+                    </div>
+                    <div class="data minor">
+                        <label for="voc">VOC</label>
+                        <div class="value" id="voc"><span class="number">90</span><span class="unit">ppb</span></div>
+                    </div>
+                    <div class="data minor">
+                        <label for="pm25">초미세먼지</label>
+                        <div class="value" id="pm25"><span class="number">90</span><span class="unit">µm/m³</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="footnote">
+            <blockquote id="abc_script">
+                <div class="quote open">&ldquo;</div>
+                흠..이건 좀 못생겼는데, 당분간은 어쩔 수가 없군요. 일단 쓰고 계시면 더 멋있는 녀석으로 준비해서 드리겠습니다.
+                <div class="quote close">&rdquo;</div>
+            </blockquote>
+            <figure>
+                <img id="abc" src="./abc-150x150.png" alt="abc" />
+                <figcaption id="abc_name" lang="en">Mr. Alexander Bonaparte Cust</figcaption>
+            </figure>
+        </div>
+        <div id="footer">
+            The air conditioner icon is made by <a href="https://www.freepik.com" title="Freepik" target="_blank" rel="noopener">Freepik</a>.<br>
+            The lamp icon is made by <a href="https://www.flaticon.com/authors/icongeek26" title="Icongeek26" target="_blank" rel="noopener">Icongeek26</a>.<br>
+            The battery icon is made by <a href="https://www.freepik.com/" title="Freepik">Freepik</a>.<br>
+            The error icon is made by <a href="https://www.flaticon.com/authors/vectors-market" title="Vectors Market">Vectors Market</a>.<br>
+            These icons are from <a href="https://www.flaticon.com/" title="Flaticon" target="_blank" rel="noopener">www.flaticon.com</a><br>
+            and licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank" rel="noopener">CC 3.0 BY</a>.
+        </div>
+
+        <div id="toast"></div>
+
+        <script>
+        // ── 데모: 실제 API 대신 토스트 + 샘플 데이터 (원본은 /abc/api/* 로 fetch 했음) ──
+        function getElement(id) { return document.getElementById(id); }
+
+        let toastTimer = null;
+        function toast(msg) {
+            const t = getElement('toast');
+            t.innerHTML = msg;
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+        }
+
+        // 버튼: 인격체(Audrey/Brice)에게 명령을 "전달"한 척 — 원래 Slack ack 톤 재현
+        function bind(id, device) {
+            const el = getElement(id);
+            el.onclick = () => toast(device + "에게 &lsquo;" + el.textContent + "&rsquo; 명령을 전달했습니다.");
+        }
+        ['audrey-on','audrey-off','audrey-power-on','audrey-power-off'].forEach(id => bind(id, 'Audrey'));
+        ['brice-switch-on','brice-switch-off','brice-switch-on-1','brice-switch-off-1','brice-switch-on-2','brice-switch-off-2']
+            .forEach(id => bind(id, 'Brice'));
+
+        // Cathy: 로딩 후 샘플 공기질 표시 + 값이 미묘하게 실시간으로 드리프트(살아있는 센서 느낌)
+        function setSample(id, value, colorIndex) {
+            const num = getElement(id).querySelector('.number');
+            num.innerHTML = value;
+            num.className = num.className.replace(/(\s|^)color\d(\s|$)/, ' ') + ' color' + colorIndex;
+        }
+        const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+        const drift = (v, step, lo, hi) => clamp(v + (Math.random() - 0.5) * step, lo, hi);
+        const cScore = s => s >= 90 ? 0 : s >= 80 ? 1 : s >= 70 ? 2 : s >= 60 ? 3 : 4;
+        const cVoc  = v => v < 400 ? 0 : v < 700 ? 1 : v < 1000 ? 2 : v < 2000 ? 3 : 4;
+        const cPm   = p => p < 15 ? 0 : p < 35 ? 1 : p < 75 ? 2 : p < 150 ? 3 : 4;
+        const cTemp = t => (t >= 20 && t <= 26) ? 0 : (t >= 18 && t <= 28) ? 1 : 2;
+        const cHum  = h => (h >= 40 && h <= 60) ? 0 : (h >= 30 && h <= 70) ? 1 : 2;
+        const cathy = { temperature: 24.3, humidity: 47, voc: 358, pm25: 8 };
+        function render() {
+            const score = clamp(94 - (cathy.voc - 300) / 40 * 2 - (cathy.pm25 - 5) / 2, 82, 93);
+            setSample('total_score', Math.round(score), cScore(score));
+            setSample('temperature', cathy.temperature.toFixed(1), cTemp(cathy.temperature));
+            setSample('humidity', Math.round(cathy.humidity), cHum(cathy.humidity));
+            setSample('voc', Math.round(cathy.voc), cVoc(cathy.voc));
+            setSample('pm25', Math.round(cathy.pm25), cPm(cathy.pm25));
+        }
+        function tick() {
+            cathy.temperature = drift(cathy.temperature, 0.4, 23.2, 25.6);
+            cathy.humidity    = drift(cathy.humidity, 2, 43, 53);
+            cathy.voc         = drift(cathy.voc, 45, 280, 560);
+            cathy.pm25        = drift(cathy.pm25, 2.5, 4, 17);
+            render();
+        }
+        setTimeout(() => {
+            getElement('cathy-loading').style.display = 'none';
+            getElement('cathy-data').style.display = 'inherit';
+            render();
+            setInterval(tick, 2500);
+        }, 900);
+
+        // Brice 배터리: 샘플 값
+        setTimeout(() => {
+            getElement('brice-battery').querySelector('.number').innerHTML = 87;
+            getElement('brice-battery').style.display = 'flex';
+        }, 600);
+        </script>
+    </body>
+</html>
