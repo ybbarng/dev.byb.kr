@@ -27,6 +27,7 @@ dev.byb.kr/
 | [Français Très Facile](https://ftf.byb.kr/) — RFI 프랑스어 학습 | 🧪 Lab | 2026 |
 | [Claude Buddy Showcase](https://gh.byb.kr/claude-buddy-showcase/) | 📦 Archive | 2026 |
 | [worldcup-2026](./worldcup-2026/) — 데이터로 본 2026 월드컵 | 📦 Archive | 2026 |
+| [와인 아카이브](https://wine.byb.kr/) — 마신 와인 기록·3D 잔·산지 지도 | 🧪 Lab | 2026 |
 
 ## 새 프로젝트 추가하기
 
