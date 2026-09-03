@@ -362,9 +362,17 @@
   const journeyLabel = byId('journeyLabel');
   const TRACK_Y = 54, SPAN = 4;
 
-  let journey = null;   // {line, stations, color, base, dirLabel, frames, forwardT, oncoming, tick, numSeq}
+  let journey = null;   // {line, stations, color, last, trains, mine, hold, spec}
   let stationDots = [], myMarker = null;
-  let fi = 0, playing = false, timer = null;
+  let playing = false, timer = null;
+
+  // ── 원본 SimulateJourneyUseCase 상수·규칙 그대로 옮김 ──
+  const STEP_MIN = 0.12, STEP_JITTER = 0.09;        // 한 틱 이동 거리(역 인덱스 단위)
+  const MIN_GAP = 1.2;                               // 같은 방향 열차끼리 유지할 최소 간격
+  const TICK_MIN_MS = 1600, TICK_JITTER_MS = 1000;   // 틱 간격(조금 랜덤)
+  function step(){ return STEP_MIN + Math.random()*STEP_JITTER; }
+  function tickDelay(){ return TICK_MIN_MS + Math.random()*TICK_JITTER_MS; }
+  function randNo(){ return String(1000 + Math.floor(Math.random()*9000)); }
 
   // 진행 방향으로 역 배열을 만들고, 출발역 뒤(이미 지나온 쪽)에도 역이 보이게 한다.
   // 순환선(2호선)은 반대쪽 끝을 이어 붙여 출발역 앞이 비지 않게 회전시킨다.
@@ -379,13 +387,12 @@
       for(let k=0;k<n;k++) rot.push(ordered[(start - back + k + n) % n]);
       ordered = rot; start = back;
     }
-    buildJourney(line, ordered, label, start);
+    buildJourney(line, ordered, label, start, {line, fromIdx, toIdx, label});
   }
 
-  function buildJourney(line, stations, dirLabel, startIdx=0){
+  function buildJourney(line, stations, dirLabel, startIdx, spec){
     // 트랙 초기화(레일만 남기고 마커 제거)
     [...homeTrack.querySelectorAll('.dot,.slabel,.marker')].forEach(n=>n.remove());
-    const base = parseInt(line.no,10)*1000 + 400;
     homeRail.style.background = line.color;
     homeBadge.querySelector('.bar').style.background = line.color;
     const pill = homeBadge.querySelector('.pill');
@@ -401,69 +408,88 @@
       return {dot,label};
     });
     myMarker = document.createElement('div'); myMarker.className='marker mine';
-    myMarker.innerHTML = `<span class="tm" style="background:${line.color}">${base+18} ▸</span>`;
+    myMarker.innerHTML = `<span class="tm" style="background:${line.color}"></span>`;
     myMarker.style.top=(TRACK_Y+34)+'px';
-    homeTrack.appendChild(myMarker); setX(myMarker,0.5);
+    homeTrack.appendChild(myMarker);
 
-    // 같은 방향 주변 열차(선 아래): 각자 다른 주기·진폭으로 앞뒤 간격이 늘었다 줄었다 한다.
-    // (내 열차 기준 상대 위치를 sin 으로 흔들어 "각자의 속도"처럼 보이게 — 내 열차를 추월하진 않는다.)
-    const forwardT = [
-      {base:+1.9, amp:0.85, freq:0.55, phase:0.0, num:base+16},
-      {base:-1.8, amp:0.95, freq:0.41, phase:1.7, num:base+22},
-      {base:+3.1, amp:0.70, freq:0.67, phase:3.0, num:base+8},
-    ];
-
-    // 프레임(도착→출발→이동→접근)
-    const frames=[];
-    for(let i=startIdx;i<stations.length-1;i++){
-      const s=stations[i], e=stations[i+1];
-      frames.push({p:i,      msg:`${s}역에 도착했습니다.`});
-      frames.push({p:i+0.2,  msg:`${s}역에서 ${e}역으로 출발하였습니다.`});
-      frames.push({p:i+0.5,  msg:`${s}역에서 ${e}역으로 이동 중입니다.`});
-      frames.push({p:i+0.85, msg:`${e}역에 접근 중입니다.`});
+    const last = stations.length - 1;
+    // 노선에 열차를 흩뿌린다(원본과 같은 패턴). 내 열차는 startIdx 에서 출발, 나머지는 같은 방향/맞은편.
+    const mine = {pos:startIdx, forward:true, number:randNo(), mine:true};
+    const trains = [mine];
+    let k = 2;
+    while(k < last){
+      if(Math.abs(k - startIdx) >= MIN_GAP) trains.push({pos:k, forward:true, number:randNo()});
+      trains.push({pos:k + 1.5, forward:false, number:randNo()});
+      k += 3;
     }
-    frames.push({p:stations.length-1, msg:`${stations[stations.length-1]}역에 도착했습니다.`});
 
-    journey = {line, stations, color:line.color, base, dirLabel, frames, forwardT, oncoming:[], tick:0, numSeq:base+40};
-    seedOncoming(frames[0].p);
-    fi = 0;
-    renderHome(frames[0].p, frames[0].msg);
+    journey = {line, stations, color:line.color, last, trains, mine, hold:0, spec};
+    renderHome();
   }
 
-  // 맞은편 열차를 노선 앞쪽에 흩뿌린다. 각자 다른 속도로 다가와 왼쪽으로 스쳐 지나간다.
-  function seedOncoming(p0){
-    journey.oncoming = [];
-    for(let k=0;k<5;k++){
-      journey.oncoming.push({pos:p0 + 1.0 + 2.0*k, vel:-(0.27 + 0.03*(k%3)), num:journey.numSeq});
-      journey.numSeq += 2;
+  // 원본 advance() 포팅: 모든 열차를 한 걸음 전진시키되 —
+  //  · 같은 방향끼리는 앞차와 MIN_GAP 을 지킨다(가까우면 대기 → 추월·겹침 없음)
+  //  · 맞은편은 다른 선로라 서로 자유롭게 지나친다
+  //  · 양끝을 벗어난 주변 열차는 반대편에서 새 번호로 재등장
+  //  · 내 열차는 종점에 닿으면 그 역에 고정(간격 계산의 앞차 후보에서도 빠져 뒤 열차가 흘러간다)
+  function advance(){
+    const {trains, last} = journey;
+    const lo = -0.5, hi = last + 0.5;
+    // 정방향: pos 증가. 앞차 = 바로 더 큰 pos.
+    const fwd = trains.filter(t=>t.forward).sort((a,b)=>a.pos-b.pos);
+    for(let i=0;i<fwd.length;i++){
+      const t = fwd[i];
+      if(t.mine && t.pos >= last) continue;              // 종점 고정된 내 열차는 안 움직임
+      const desired = t.pos + step();
+      let ahead = null;                                  // 멈춘 내 열차는 앞차 후보에서 제외
+      for(let j=i+1;j<fwd.length;j++){ if(!(fwd[j].mine && fwd[j].pos>=last)){ ahead = fwd[j]; break; } }
+      let next;
+      if(ahead == null){ next = desired; }
+      else { const limit = ahead.pos - MIN_GAP; next = desired <= limit ? desired : Math.max(t.pos, limit); }
+      if(t.mine){ if(next >= last) next = last; t.pos = next; }
+      else { t.pos = next; if(t.pos > hi){ t.pos = lo; t.number = randNo(); } }
+    }
+    // 역방향: pos 감소. 앞차 = 바로 더 작은 pos.
+    const bwd = trains.filter(t=>!t.forward).sort((a,b)=>b.pos-a.pos);
+    for(let i=0;i<bwd.length;i++){
+      const t = bwd[i];
+      const desired = t.pos - step();
+      const ahead = bwd[i+1] || null;
+      if(ahead == null){ t.pos = desired; }
+      else { const limit = ahead.pos + MIN_GAP; t.pos = desired >= limit ? desired : Math.min(t.pos, limit); }
+      if(t.pos < lo){ t.pos = hi; t.number = randNo(); }
     }
   }
-  // 한 틱만큼 주변 열차를 움직인다(맞은편만 절대 위치로 이동, 화면 벗어나면 앞쪽에서 새로 등장).
-  function advanceTraffic(p){
-    journey.tick++;
-    journey.oncoming.forEach(o=>{
-      o.pos += o.vel;
-      if(o.pos - p < -4.8){ o.pos = p + 4.8 + Math.random()*1.6; o.num = journey.numSeq; journey.numSeq += 2; }
-    });
+
+  // 내 열차 위치에서 현재 역·상태를 파생해 문구를 만든다(원본 context()/smartContextMessage 규칙).
+  function statusText(){
+    const {stations, last, mine} = journey;
+    const p = Math.max(0, Math.min(last, mine.pos));
+    const here = Math.max(0, Math.min(last, Math.floor(p)));
+    const frac = p - here;
+    const cur = stations[here], next = stations[here+1];
+    if(here >= last || frac < 0.12) return `${cur}역에 도착했습니다.`;
+    if(frac < 0.35) return `${cur}역에서 ${next}역으로 출발하였습니다.`;
+    if(frac < 0.7)  return `${cur}역에서 ${next}역으로 이동 중입니다.`;
+    return `${next}역에 접근 중입니다.`;
   }
 
-  function renderHome(progress, msg){
-    homeStatus.textContent = msg;
-    const color = journey.color;
+  function renderHome(){
+    const {stations, color, mine, trains} = journey;
+    homeStatus.textContent = statusText();
+    myMarker.querySelector('.tm').textContent = `${mine.number} ▸`;
+    setX(myMarker, 0.5);
+    // 역: 내 열차(가운데)를 기준으로 상대 배치 → 진행하면 왼쪽으로 흐른다.
     stationDots.forEach((s,i)=>{
-      const frac = 0.5 + (i-progress)/SPAN;
+      const frac = 0.5 + (i - mine.pos)/SPAN;
       const vis = frac>=-0.45 && frac<=1.45;
       s.dot.style.display = s.label.style.display = vis?'block':'none';
       if(vis){ setX(s.dot,frac); setX(s.label,frac); }
     });
-    // 같은 방향(선 아래): 각자 다른 주기로 앞뒤 거리가 출렁인다.
-    journey.forwardT.forEach(f=>{
-      const off = f.base + f.amp*Math.sin(journey.tick*f.freq + f.phase);
-      placeOther(f, 0.5 + off/SPAN, true, color);
-    });
-    // 맞은편(선 위): 자기 속도로 흘러 지나간다.
-    journey.oncoming.forEach(o=>{
-      placeOther(o, 0.5 + (o.pos-progress)/SPAN, false, color);
+    // 주변 열차: 시뮬레이션 실제 위치 그대로. 같은 방향(▸ 아래)/맞은편(◂ 위).
+    trains.forEach(t=>{
+      if(t.mine) return;
+      placeOther(t, 0.5 + (t.pos - mine.pos)/SPAN, t.forward, color);
     });
   }
   // 열차 하나를 자기 DOM(train._el)에 그린다. 화면 밖이면 숨기고, 다시 나타날 땐 슬라이드 없이 제자리에 둔다.
@@ -480,21 +506,23 @@
     el.style.top=(forward?TRACK_Y+38:TRACK_Y-24)+'px';
     const tm=el.querySelector('.tm');
     tm.style.background = hexA(color, 0.58);
-    tm.textContent = forward?`${train.num} ▸`:`◂ ${train.num}`;
+    tm.textContent = forward?`${train.number} ▸`:`◂ ${train.number}`;
     if(wasHidden){ el.style.transition='none'; setX(el,frac); void el.offsetWidth; el.style.transition=''; }
     else setX(el,frac);
   }
   function hexA(hex,a){ const n=parseInt(hex.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
 
   function tick(){
-    if(fi===0) seedOncoming(journey.frames[0].p);
-    const f=journey.frames[fi];
-    advanceTraffic(f.p);
-    renderHome(f.p,f.msg);
-    fi=(fi+1)%journey.frames.length;
+    advance();
+    renderHome();
+    // 내 열차가 종점에 고정되면 잠시 뒤 같은 여정을 다시 시작(데모가 계속 살아있게).
+    if(journey.mine.pos >= journey.last){
+      if(++journey.hold >= 4){ const s = journey.spec; launchJourney(s.line, s.fromIdx, s.toIdx, s.label); }
+    }
+    if(playing) timer = setTimeout(tick, tickDelay());
   }
-  function play(){ if(timer||!journey) return; playing=true; syncScan(); tick(); timer=setInterval(tick,2200); }
-  function stop(){ clearInterval(timer); timer=null; playing=false; syncScan(); }
+  function play(){ if(timer || !journey) return; playing=true; syncScan(); timer = setTimeout(tick, tickDelay()); }
+  function stop(){ clearTimeout(timer); timer=null; playing=false; syncScan(); }
   function syncScan(){
     scanBtn.classList.toggle('active', playing);
     scanLabel.textContent = playing?'탐색 멈추기':'현재 위치 탐색';
