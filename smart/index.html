@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>smart · 지하철 탑승 알림 (웹 데모)</title>
+<meta name="description" content="BLE 비콘으로 탑승한 지하철을 감지해 실시간 정보를 알려주던 안드로이드 앱 smart의 화면을 웹으로 재현한 데모입니다." />
+<style>
+  :root{
+    /* 앱 다크 테마(Android DarkColorScheme 기반) */
+    --primary:#265aab; --on-primary:#ffffff; --primary-container:#193d75;
+    --brand:#00a84f;            /* 강조 초록(앱 아이콘·2호선) */
+    --page:#0b0f14; --page2:#11161f;
+    --surface:#181c23; --surface-var:#262c37; --line:#232a35;
+    --on-surface:#e8eef7; --on-surface-var:#9aa5b3; --muted:#5c6b7d;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    background:radial-gradient(1200px 600px at 50% -10%, #16202e 0%, var(--page) 60%);
+    color:var(--on-surface); min-height:100vh;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    -webkit-font-smoothing:antialiased; line-height:1.6;
+  }
+  a{color:inherit;}
+  .wrap{max-width:900px; margin:0 auto; padding:36px 20px 64px;}
+
+  /* ── 페이지 헤더 ── */
+  .back{display:inline-flex; align-items:center; gap:6px; color:var(--on-surface-var);
+    text-decoration:none; font-size:14px; font-weight:600;}
+  .back:hover{color:var(--on-surface);}
+  header.page{text-align:center; margin-top:26px;}
+  .appicon{width:64px; height:64px; border-radius:16px; display:inline-block; vertical-align:middle;
+    box-shadow:0 8px 24px rgba(0,0,0,.4);}
+  .page h1{font-size:clamp(24px,5vw,34px); font-weight:900; letter-spacing:-.5px; margin:16px 0 6px;}
+  .page .sub{color:var(--on-surface-var); font-size:15px; max-width:560px; margin:0 auto;}
+  .badges{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:16px;}
+  .chip{font-size:12px; font-weight:700; padding:5px 12px; border-radius:999px;
+    background:var(--page2); border:1px solid var(--line); color:var(--on-surface-var);}
+
+  /* ── 폰 목업 ── */
+  .stage{display:flex; justify-content:center; margin:34px 0 10px;}
+  .phone{
+    width:360px; max-width:100%; height:740px; background:var(--surface);
+    border-radius:40px; border:1px solid #2b3340; padding:12px;
+    box-shadow:0 30px 80px rgba(0,0,0,.55), inset 0 0 0 6px #0c0f14;
+    position:relative; display:flex; flex-direction:column; overflow:hidden;
+  }
+  .screen{flex:1; background:var(--page); border-radius:28px; overflow:hidden;
+    display:flex; flex-direction:column; position:relative;}
+
+  /* 상단 앱바 */
+  .appbar{height:52px; display:flex; align-items:center; padding:0 18px; flex:none;
+    border-bottom:1px solid rgba(255,255,255,.04);}
+  .appbar .title{font-size:18px; font-weight:800; letter-spacing:-.3px;}
+
+  /* 콘텐츠 */
+  .content{flex:1; overflow-y:auto; overflow-x:hidden; position:relative;}
+  .content::-webkit-scrollbar{width:0;}
+  .pane{display:none; padding:14px 16px 24px; min-height:100%; position:relative;}
+  .pane.on{display:block;}
+
+  /* 여정 바(홈) */
+  .journeybar{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--on-surface-var);}
+  .journeybar b{color:var(--on-surface);}
+  .linkbtn{margin-left:auto; background:var(--surface-var); color:var(--on-surface); border:none;
+    border-radius:999px; padding:6px 13px; font-size:12px; font-weight:700; cursor:pointer;}
+  .linkbtn:hover{background:#30384a;}
+
+  /* 노선 배지 */
+  .linebadge{position:relative; height:6px; margin:10px 0 0; display:flex; align-items:center; justify-content:center;}
+  .linebadge .bar{position:absolute; left:0; right:0; height:6px; border-radius:2px;}
+  .linebadge .pill{position:relative; z-index:1; background:#e8e8e8; color:#1a1a1a;
+    font-size:13px; font-weight:800; padding:4px 15px; border-radius:999px; border:2px solid;}
+
+  /* 상태 문구 */
+  .status{text-align:center; font-size:16px; font-weight:600; margin:22px 22px 0; min-height:48px;}
+
+  /* 타임라인 */
+  .track{position:relative; width:100%;}
+  .track .rail{position:absolute; height:4px; border-radius:2px;}
+  .dot{position:absolute; width:11px; height:11px; border-radius:50%;
+    background:var(--page); border:2px solid; transform:translate(-50%,-50%);
+    transition:left .9s cubic-bezier(.4,0,.2,1);}
+  .dot.center{width:16px; height:16px; border:none;}
+  .slabel{position:absolute; width:72px; text-align:center; transform:translateX(-50%);
+    font-size:12px; color:var(--on-surface); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    transition:left .9s cubic-bezier(.4,0,.2,1);}
+  .slabel.center{font-weight:800;}
+  .marker{position:absolute; transform:translateX(-50%); transition:left .9s cubic-bezier(.4,0,.2,1);}
+  .marker .tm{display:inline-block; color:#fff; font-size:11px; font-weight:800; line-height:1;
+    padding:4px 8px; border-radius:8px; white-space:nowrap;}
+  .marker.mine .tm{font-size:12px; padding:5px 10px;}
+  .marker.other .tm{font-size:10px;}
+  .dirlabels{display:flex; justify-content:space-between; font-size:12px; color:var(--on-surface-var);
+    padding:0 28px;}
+
+  /* 스캔 버튼(홈) */
+  .scanwrap{position:absolute; left:0; right:0; bottom:20px; display:flex; justify-content:center; pointer-events:none;}
+  .scanbtn{pointer-events:auto; display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    padding:13px 22px; border-radius:28px; font-size:15px; font-weight:700; border:none;
+    box-shadow:0 4px 14px rgba(0,0,0,.4); transition:.15s; user-select:none;}
+  .scanbtn.active{background:var(--primary); color:#fff;}
+  .scanbtn:not(.active){background:var(--surface-var); color:var(--on-surface-var);}
+  .scanbtn svg{width:20px; height:20px;}
+
+  /* 데모 여정 선택창 */
+  .picker{position:absolute; inset:0; background:var(--page); padding:16px 18px 24px; overflow-y:auto; z-index:6;}
+  .picker::-webkit-scrollbar{width:0;}
+  .picker .head{display:flex; align-items:center; margin-bottom:14px;}
+  .picker .head h3{font-size:17px; font-weight:800; margin:0;}
+  .pclose{margin-left:auto; background:none; border:none; color:var(--on-surface-var);
+    font-size:14px; font-weight:700; cursor:pointer;}
+  .psection{margin-top:18px;}
+  .psection .lbl{font-size:13px; font-weight:800; margin-bottom:8px; color:var(--on-surface-var);}
+  .pchips{display:flex; flex-wrap:wrap; gap:6px;}
+  .pchip{border:1px solid var(--line); background:var(--surface-var); color:var(--on-surface-var);
+    border-radius:999px; padding:6px 13px; font-size:13px; font-weight:700; cursor:pointer; transition:.12s;}
+  .pchip.on{color:#fff; border-color:transparent;}
+  .pinput{width:100%; background:var(--surface-var); border:1px solid var(--line); border-radius:12px;
+    padding:11px 14px; color:var(--on-surface); font-size:14px; outline:none;}
+  .plist{max-height:210px; overflow-y:auto; margin-top:8px;}
+  .plist::-webkit-scrollbar{width:0;}
+  .prow{padding:11px 4px; border-bottom:1px solid var(--line); cursor:pointer; font-size:14px;}
+  .prow:hover{color:var(--on-surface); background:rgba(255,255,255,.02);}
+  .prow.sel{color:var(--brand); font-weight:800;}
+  .dirbtn{display:block; width:100%; text-align:center; margin-top:8px; padding:13px;
+    border-radius:12px; border:none; color:#fff; font-weight:800; font-size:14px; cursor:pointer;}
+
+  /* 검색바(역·열차) */
+  .searchbar{display:flex; align-items:center; gap:10px; background:var(--surface-var);
+    border-radius:26px; padding:11px 16px; color:var(--on-surface-var); font-size:14px;}
+  .searchbar svg{width:18px; height:18px; flex:none;}
+  .searchbar .q{color:var(--on-surface);}
+  .searchbar .cursor{color:var(--on-surface-var);}
+  .hint{color:var(--on-surface-var); font-size:12px; margin:8px 2px 0;}
+
+  /* 카드 */
+  .card{background:var(--surface-var); border-radius:14px; padding:18px 20px;
+    box-shadow:0 4px 12px rgba(0,0,0,.3);}
+  .card .num{font-size:22px; font-weight:800;}
+  .card .where{font-size:16px; margin-top:6px;}
+  .card .dst{font-size:13px; color:var(--on-surface-var); margin-top:2px;}
+
+  .kicker{font-size:12px; color:var(--on-surface-var);}
+  .updated{font-size:11px; color:var(--on-surface-var); margin-top:10px;}
+  .tsummary{font-size:13px; margin-top:8px;}
+
+  /* 객차 다이어그램 */
+  .cars-title{font-size:15px; font-weight:800; margin:0 0 10px;}
+  .cars{display:flex; gap:4px;}
+  .car{flex:1; height:38px; border-radius:6px; display:flex; align-items:center; justify-content:center;
+    font-size:12px; background:var(--surface); border:1px solid rgba(255,255,255,.08); color:var(--on-surface-var);}
+  .car.mine{border:none; color:#fff; font-weight:800;}
+
+  /* 하단 네비 */
+  .nav{height:64px; flex:none; display:flex; border-top:1px solid rgba(255,255,255,.06); background:var(--surface);}
+  .navitem{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+    cursor:pointer; color:var(--on-surface-var); font-size:11px; font-weight:600; position:relative;}
+  .navitem .ind{width:52px; height:30px; border-radius:16px; display:flex; align-items:center; justify-content:center;
+    transition:background .15s;}
+  .navitem svg{width:22px; height:22px;}
+  .navitem.on{color:var(--on-surface);}
+  .navitem.on .ind{background:var(--primary-container);}
+
+  /* 폰 아래 안내 */
+  .note{max-width:440px; margin:14px auto 0; text-align:center; color:var(--muted); font-size:12.5px;}
+  .note b{color:var(--on-surface-var);}
+  footer{text-align:center; color:var(--muted); font-size:13px; margin-top:44px;
+    padding-top:24px; border-top:1px solid var(--line);}
+  footer a{color:var(--on-surface-var);}
+
+  @media (max-width:420px){ .phone{height:88vh;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../">← dev.byb.kr</a>
+
+  <header class="page">
+    <!-- 앱 아이콘 모티프(초록 노선 + 열차 알약) -->
+    <svg class="appicon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-label="smart 앱 아이콘">
+      <rect width="64" height="64" rx="15" fill="#0d0f10"/>
+      <line x1="10" y1="26" x2="54" y2="26" stroke="#00a84f" stroke-width="3.2" stroke-linecap="round"/>
+      <circle cx="18" cy="26" r="4.2" fill="#0d0f10" stroke="#00a84f" stroke-width="2.6"/>
+      <circle cx="32" cy="26" r="4.2" fill="#0d0f10" stroke="#00a84f" stroke-width="2.6"/>
+      <circle cx="46" cy="26" r="4.2" fill="#0d0f10" stroke="#00a84f" stroke-width="2.6"/>
+      <rect x="16" y="36" width="30" height="14" rx="7" fill="#00a84f"/>
+      <text x="29" y="46.3" font-family="ui-monospace,Menlo,monospace" font-size="9" font-weight="800" fill="#0d0f10" text-anchor="middle">1234</text>
+      <path d="M43 40 l5 3 -5 3 z" fill="#0d0f10"/>
+    </svg>
+    <h1>smart</h1>
+    <p class="sub">BLE 비콘으로 <b>탑승한 지하철을 감지</b>해, 지금 어디를 지나는지 폰·워치로 실시간으로 알려주던 안드로이드 앱. 아래에서 <b>호선·역·방향을 골라</b> 실제 탑승 화면을 돌려볼 수 있습니다.</p>
+    <div class="badges">
+      <span class="chip">🚇 지하철</span>
+      <span class="chip">📡 BLE 비콘</span>
+      <span class="chip">⌚ Wear OS</span>
+      <span class="chip">🤖 Android · 🍎 iOS</span>
+    </div>
+  </header>
+
+  <div class="stage">
+    <div class="phone"><div class="screen">
+      <div class="appbar"><div class="title" id="appbarTitle">smart</div></div>
+
+      <div class="content">
+        <!-- ── 홈(비콘) ── -->
+        <section class="pane on" id="pane-home">
+          <div class="journeybar">
+            <span id="journeyLabel">데모 여정</span>
+            <button class="linkbtn" id="pickBtn">여정 선택</button>
+          </div>
+          <div class="linebadge" id="homeBadge">
+            <div class="bar"></div><div class="pill"></div>
+          </div>
+          <div class="status" id="homeStatus">아래 버튼을 눌러, 현재 위치를 탐색하세요.</div>
+          <div class="track" id="homeTrack" style="height:150px; margin-top:6px;">
+            <div class="rail" id="homeRail" style="left:0; right:0; top:54px;"></div>
+          </div>
+
+          <!-- 데모 여정 선택창 -->
+          <div class="picker" id="picker" hidden>
+            <div class="head"><h3>데모 여정 선택</h3><button class="pclose" id="pickClose">닫기</button></div>
+            <div class="psection">
+              <div class="lbl">호선</div>
+              <div class="pchips" id="lineChips"></div>
+            </div>
+            <div class="psection" id="stationSection" hidden>
+              <div class="lbl">역</div>
+              <input class="pinput" id="stationInput" placeholder="역 검색 (예: 강남)" autocomplete="off" />
+              <div class="plist" id="stationList"></div>
+            </div>
+            <div class="psection" id="dirSection" hidden>
+              <div class="lbl">방향</div>
+              <div id="dirButtons"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ── 열차 ── -->
+        <section class="pane" id="pane-train">
+          <div class="searchbar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <span class="q">2418</span><span class="cursor">│</span>
+          </div>
+          <div class="hint">차량번호 (객차 문 위 4자리 숫자)</div>
+          <div style="height:16px"></div>
+          <div class="linebadge"><div class="bar" style="background:#00a84f"></div>
+            <div class="pill" style="border-color:#00a84f">2호선</div></div>
+          <div style="height:14px"></div>
+          <div class="kicker">차량번호 2418 · 전광판 열차번호 2418</div>
+          <div class="track" id="trainTrack" style="height:170px; margin-top:4px;">
+            <div class="rail" style="top:60px; background:#00a84f;"></div>
+          </div>
+          <div class="card">
+            <div class="num">2418열차</div>
+            <div class="where">선릉역 도착</div>
+            <div class="dst">성수 방면</div>
+          </div>
+          <div style="height:16px"></div>
+          <div class="cars-title">내가 탄 칸 &nbsp;4칸 / 총 10칸</div>
+          <div class="cars" id="carRow"></div>
+          <div class="updated" id="trainUpdated">3초 전 기준</div>
+        </section>
+
+        <!-- ── 역 ── -->
+        <section class="pane" id="pane-station">
+          <div class="searchbar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <span class="q">강남</span>
+          </div>
+          <div class="hint">역 이름 (예: 강남)</div>
+          <div style="height:16px"></div>
+          <div class="linebadge"><div class="bar" style="background:#00a84f"></div>
+            <div class="pill" style="border-color:#00a84f">2호선</div></div>
+          <div style="height:14px"></div>
+          <div class="track" id="stationTrack" style="height:170px;">
+            <div class="rail" style="left:0; right:0; top:60px; background:#00a84f;"></div>
+            <div class="dirlabels" style="position:absolute; left:0; right:0; bottom:6px;">
+              <span>◀ 성수</span><span>삼성 ▶</span>
+            </div>
+          </div>
+          <div class="tsummary" style="color:#00a84f;">2416 · 삼성 방면 · 교대역 출발</div>
+          <div class="updated" id="stationUpdated">6초 전 기준</div>
+        </section>
+      </div>
+
+      <!-- 스캔 버튼(홈 탭에서만) -->
+      <div class="scanwrap" id="scanWrap">
+        <button class="scanbtn" id="scanBtn">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8 2 4 2.5 4 6v9.5A3.5 3.5 0 0 0 7.5 19L6 20.5V21h12v-.5L16.5 19A3.5 3.5 0 0 0 20 15.5V6c0-3.5-4-4-8-4zm-4.5 15a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm9 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM18 12H6V7h12v5z"/></svg>
+          <span id="scanLabel">현재 위치 탐색</span>
+        </button>
+      </div>
+
+      <!-- 하단 네비 -->
+      <nav class="nav" id="nav">
+        <div class="navitem on" data-tab="home">
+          <div class="ind">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"/></svg>
+          </div>smart
+        </div>
+        <div class="navitem" data-tab="train">
+          <div class="ind">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c-4 0-8 .5-8 4v9.5A3.5 3.5 0 0 0 7.5 19L6 20.5V21h12v-.5L16.5 19A3.5 3.5 0 0 0 20 15.5V6c0-3.5-4-4-8-4zM7.5 17a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm9 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM18 12H6V7h12v5z"/></svg>
+          </div>열차
+        </div>
+        <div class="navitem" data-tab="station">
+          <div class="ind">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M7.5 16V9l4.5 4 4.5-4v7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>역
+        </div>
+      </nav>
+
+    </div></div>
+  </div>
+
+  <p class="note">화면은 실제 앱을 그대로 옮긴 <b>UI 데모</b>입니다. 실기기 비콘·실시간 서버 대신 <b>가짜 여정</b>을 재생합니다. 실제 앱에선 스캔 버튼을 <b>길게 눌러</b> 이 선택창을 엽니다.</p>
+
+  <footer>
+    코드 <a href="https://github.com/ybbarng/smart" target="_blank" rel="noopener">github.com/ybbarng/smart</a> ·
+    만든 사람 <a href="https://github.com/ybbarng" target="_blank" rel="noopener">@ybbarng</a>
+  </footer>
+</div>
+
+<script>
+  /* ── 노선 데이터: 서울 지하철 1~9호선(색·역 순서). 데모용 대표 경로. ── */
+  const LINES = [
+    {no:'1', color:'#0052A4', loop:false, stations:['도봉산','도봉','방학','창동','녹천','월계','광운대','석계','신이문','외대앞','회기','청량리','제기동','신설동','동묘앞','동대문','종로5가','종로3가','종각','시청','서울역','남영','용산','노량진','대방','신길','영등포','신도림','구로','가산디지털단지','독산','금천구청','석수','관악','안양','명학','금정','군포','당정','의왕','성균관대','화서','수원']},
+    {no:'2', color:'#00A84D', loop:true,  stations:['시청','을지로입구','을지로3가','을지로4가','동대문역사문화공원','신당','상왕십리','왕십리','한양대','뚝섬','성수','건대입구','구의','강변','잠실나루','잠실','잠실새내','종합운동장','삼성','선릉','역삼','강남','교대','서초','방배','사당','낙성대','서울대입구','봉천','신림','신대방','구로디지털단지','대림','신도림','문래','영등포구청','당산','합정','홍대입구','신촌','이대','아현','충정로']},
+    {no:'3', color:'#EF7C1C', loop:false, stations:['대화','주엽','정발산','마두','백석','대곡','화정','원당','원흥','삼송','지축','구파발','연신내','불광','녹번','홍제','무악재','독립문','경복궁','안국','종로3가','을지로3가','충무로','동대입구','약수','금호','옥수','압구정','신사','잠원','고속터미널','교대','남부터미널','양재','매봉','도곡','대치','학여울','대청','일원','수서','가락시장','경찰병원','오금']},
+    {no:'4', color:'#00A5DE', loop:false, stations:['당고개','상계','노원','창동','쌍문','수유','미아','미아사거리','길음','성신여대입구','한성대입구','혜화','동대문','동대문역사문화공원','충무로','명동','회현','서울역','숙대입구','삼각지','신용산','이촌','동작','이수','사당','남태령','선바위','경마공원','대공원','과천','정부과천청사','인덕원','평촌','범계','금정','산본','수리산','대야미','반월','상록수','한대앞','중앙','고잔','초지','안산','신길온천','정왕','오이도']},
+    {no:'5', color:'#996CAC', loop:false, stations:['방화','개화산','김포공항','송정','마곡','발산','우장산','화곡','까치산','신정','목동','오목교','양평','영등포구청','영등포시장','신길','여의도','여의나루','마포','공덕','애오개','충정로','서대문','광화문','종로3가','을지로4가','동대문역사문화공원','청구','신금호','행당','왕십리','마장','답십리','장한평','군자','아차산','광나루','천호','강동','길동','굽은다리','명일','고덕','상일동']},
+    {no:'6', color:'#CD7C2F', loop:false, stations:['응암','새절','증산','디지털미디어시티','월드컵경기장','마포구청','망원','합정','상수','광흥창','대흥','공덕','효창공원앞','삼각지','녹사평','이태원','한강진','버티고개','약수','청구','신당','동묘앞','창신','보문','안암','고려대','월곡','상월곡','돌곶이','석계','태릉입구','화랑대','봉화산','신내']},
+    {no:'7', color:'#747F00', loop:false, stations:['장암','도봉산','수락산','마들','노원','중계','하계','공릉','태릉입구','먹골','중화','상봉','면목','사가정','용마산','중곡','군자','어린이대공원','건대입구','뚝섬유원지','청담','강남구청','학동','논현','반포','고속터미널','내방','이수','남성','숭실대입구','상도','장승배기','신대방삼거리','보라매','신풍','대림','남구로','가산디지털단지','철산','광명사거리','천왕','온수','부천종합운동장','춘의','신중동','부천시청','상동','삼산체육관','굴포천','부평구청']},
+    {no:'8', color:'#E6186C', loop:false, stations:['암사','천호','강동구청','몽촌토성','잠실','석촌','송파','가락시장','문정','장지','복정','남위례','산성','남한산성입구','단대오거리','신흥','수진','모란']},
+    {no:'9', color:'#BDB092', loop:false, stations:['개화','김포공항','공항시장','신방화','마곡나루','양천향교','가양','증미','등촌','염창','신목동','선유도','당산','국회의사당','여의도','샛강','노량진','노들','흑석','동작','구반포','신반포','고속터미널','사평','신논현','언주','선정릉','삼성중앙','봉은사','종합운동장','삼전','석촌고분','석촌','송파나루','한성백제','올림픽공원','둔촌오륜','중앙보훈병원']},
+  ];
+  const byNo = Object.fromEntries(LINES.map(l=>[l.no,l]));
+
+  /* ── 탭 전환 ── */
+  const panes = { home:byId('pane-home'), train:byId('pane-train'), station:byId('pane-station') };
+  const titles = { home:'smart', train:'열차', station:'역' };
+  const scanWrap = byId('scanWrap');
+  byId('nav').addEventListener('click', e=>{
+    const item = e.target.closest('.navitem'); if(!item) return;
+    const tab = item.dataset.tab;
+    document.querySelectorAll('.navitem').forEach(n=>n.classList.toggle('on', n===item));
+    Object.entries(panes).forEach(([k,el])=>el.classList.toggle('on', k===tab));
+    byId('appbarTitle').textContent = titles[tab];
+    scanWrap.style.display = tab==='home' ? 'flex' : 'none';
+  });
+  function byId(id){ return document.getElementById(id); }
+  function setX(el, frac){ el.style.left = `calc(28px + (100% - 56px) * ${frac})`; }
+
+  /* ── 홈: 탑승 모드 재생 엔진 ── */
+  const homeTrack = byId('homeTrack');
+  const homeRail = byId('homeRail');
+  const homeStatus = byId('homeStatus');
+  const homeBadge = byId('homeBadge');
+  const journeyLabel = byId('journeyLabel');
+  const TRACK_Y = 54, SPAN = 4;
+
+  let journey = null;   // {line, stations, color, base, dirLabel, frames}
+  let stationDots = [], myMarker = null, otherPool = [];
+  let fi = 0, playing = false, timer = null;
+
+  function buildJourney(line, stations, dirLabel){
+    // 트랙 초기화(레일만 남기고 마커 제거)
+    [...homeTrack.querySelectorAll('.dot,.slabel,.marker')].forEach(n=>n.remove());
+    const base = parseInt(line.no,10)*1000 + 400;
+    homeRail.style.background = line.color;
+    homeBadge.querySelector('.bar').style.background = line.color;
+    const pill = homeBadge.querySelector('.pill');
+    pill.style.borderColor = line.color; pill.textContent = `${line.no}호선`;
+    journeyLabel.innerHTML = `<b>${line.no}호선</b> · ${stations[0]} → ${dirLabel}`;
+
+    stationDots = stations.map(name=>{
+      const dot = document.createElement('div');
+      dot.className='dot'; dot.style.borderColor=line.color; dot.style.top=(TRACK_Y+2)+'px';
+      const label = document.createElement('div');
+      label.className='slabel'; label.textContent=name; label.style.top=(TRACK_Y+12)+'px';
+      homeTrack.appendChild(dot); homeTrack.appendChild(label);
+      return {dot,label};
+    });
+    myMarker = document.createElement('div'); myMarker.className='marker mine';
+    myMarker.innerHTML = `<span class="tm" style="background:${line.color}">${base+18} ▸</span>`;
+    myMarker.style.top=(TRACK_Y+34)+'px';
+    homeTrack.appendChild(myMarker); setX(myMarker,0.5);
+    otherPool = [];
+
+    // 맞은편 열차: 노선 위 고정 위치 → 나아가면 왼쪽으로 스쳐 지나간다
+    const oncoming = [];
+    for(let k=0;k<Math.ceil(stations.length/3)+1;k++) oncoming.push({progress:1.5+3*k, num:base+15+2*k});
+    const forwards = [{delta:1.4, num:base+16},{delta:-1.15, num:base+22}];
+
+    // 프레임(도착→출발→이동→접근)
+    const frames=[];
+    for(let i=0;i<stations.length-1;i++){
+      const s=stations[i], e=stations[i+1];
+      frames.push({p:i,      msg:`${s}역에 도착했습니다.`});
+      frames.push({p:i+0.2,  msg:`${s}역에서 ${e}역으로 출발하였습니다.`});
+      frames.push({p:i+0.5,  msg:`${s}역에서 ${e}역으로 이동 중입니다.`});
+      frames.push({p:i+0.85, msg:`${e}역에 접근 중입니다.`});
+    }
+    frames.push({p:stations.length-1, msg:`${stations[stations.length-1]}역에 도착했습니다.`});
+
+    journey = {line, stations, color:line.color, base, dirLabel, frames, oncoming, forwards};
+    fi = 0;
+    renderHome(frames[0].p, frames[0].msg);
+  }
+
+  function renderHome(progress, msg){
+    homeStatus.textContent = msg;
+    const {stations, color, oncoming, forwards} = journey;
+    stationDots.forEach((s,i)=>{
+      const frac = 0.5 + (i-progress)/SPAN;
+      const vis = frac>=-0.45 && frac<=1.45;
+      s.dot.style.display = s.label.style.display = vis?'block':'none';
+      if(vis){ setX(s.dot,frac); setX(s.label,frac); }
+    });
+    const others=[];
+    forwards.forEach(f=> others.push({frac:0.5+(f.delta)/SPAN, num:f.num, forward:true}));
+    oncoming.forEach(o=>{ const frac=0.5+(o.progress-progress)/SPAN; if(frac>=-0.45&&frac<=1.45) others.push({frac,num:o.num,forward:false}); });
+    while(otherPool.length<others.length){
+      const m=document.createElement('div'); m.className='marker other';
+      m.innerHTML='<span class="tm"></span>'; homeTrack.appendChild(m); otherPool.push(m);
+    }
+    otherPool.forEach((m,i)=>{
+      const o=others[i];
+      if(!o){ m.style.display='none'; return; }
+      m.style.display='block';
+      m.style.top=(o.forward?TRACK_Y+38:TRACK_Y-24)+'px';
+      const tm=m.querySelector('.tm');
+      tm.style.background = hexA(color, 0.58);
+      tm.textContent = o.forward?`${o.num} ▸`:`◂ ${o.num}`;
+      setX(m,o.frac);
+    });
+  }
+  function hexA(hex,a){ const n=parseInt(hex.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
+
+  function tick(){ const f=journey.frames[fi]; renderHome(f.p,f.msg); fi=(fi+1)%journey.frames.length; }
+  function play(){ if(timer||!journey) return; playing=true; syncScan(); tick(); timer=setInterval(tick,2200); }
+  function stop(){ clearInterval(timer); timer=null; playing=false; syncScan(); }
+  function syncScan(){
+    scanBtn.classList.toggle('active', playing);
+    scanLabel.textContent = playing?'탐색 멈추기':'현재 위치 탐색';
+  }
+
+  const scanBtn = byId('scanBtn'), scanLabel = byId('scanLabel');
+  scanBtn.addEventListener('click', ()=>{ if(!journey){ openPicker(); return; } playing?stop():play(); });
+
+  /* ── 데모 여정 선택창 ── */
+  const picker = byId('picker');
+  const lineChips = byId('lineChips');
+  const stationSection = byId('stationSection'), stationInput = byId('stationInput'), stationList = byId('stationList');
+  const dirSection = byId('dirSection'), dirButtons = byId('dirButtons');
+  let pickLine = null, pickStationIdx = null;
+
+  LINES.forEach(l=>{
+    const chip=document.createElement('button'); chip.className='pchip'; chip.textContent=`${l.no}호선`;
+    chip.addEventListener('click', ()=>selectLine(l, chip));
+    lineChips.appendChild(chip);
+  });
+  function openPicker(){ picker.hidden=false; scanWrap.style.display='none'; }
+  function closePicker(){ picker.hidden=true; if(panes.home.classList.contains('on')) scanWrap.style.display='flex'; }
+  byId('pickBtn').addEventListener('click', openPicker);
+  byId('pickClose').addEventListener('click', closePicker);
+
+  function selectLine(l, chip){
+    pickLine=l; pickStationIdx=null;
+    [...lineChips.children].forEach(c=>{ c.classList.remove('on'); c.style.background=''; });
+    chip.classList.add('on'); chip.style.background=l.color;
+    stationSection.hidden=false; dirSection.hidden=true;
+    stationInput.value=''; renderStationList('');
+    stationInput.oninput = ()=>renderStationList(stationInput.value.trim());
+  }
+  function renderStationList(q){
+    stationList.innerHTML='';
+    pickLine.stations.forEach((name,idx)=>{
+      if(q && !name.includes(q)) return;
+      const row=document.createElement('div'); row.className='prow'+(idx===pickStationIdx?' sel':'');
+      row.textContent=name;
+      row.addEventListener('click', ()=>selectStation(idx));
+      stationList.appendChild(row);
+    });
+  }
+  function selectStation(idx){
+    pickStationIdx=idx;
+    [...stationList.children].forEach(r=>r.classList.toggle('sel', r.textContent===pickLine.stations[idx]));
+    // 방향: 뒤쪽 종점 / 앞쪽 종점
+    dirButtons.innerHTML='';
+    const n=pickLine.stations.length;
+    const dirs=[];
+    if(idx < n-1) dirs.push({to:n-1, label: pickLine.loop?'외선순환':`${pickLine.stations[n-1]} 방면`});
+    if(idx > 0)   dirs.push({to:0,   label: pickLine.loop?'내선순환':`${pickLine.stations[0]} 방면`});
+    dirs.forEach(d=>{
+      const b=document.createElement('button'); b.className='dirbtn'; b.style.background=pickLine.color; b.textContent=d.label;
+      b.addEventListener('click', ()=>startJourney(idx, d.to, d.label));
+      dirButtons.appendChild(b);
+    });
+    dirSection.hidden=false;
+  }
+  function startJourney(from, to, label){
+    const seq = to>from ? pickLine.stations.slice(from, to+1)
+                        : pickLine.stations.slice(to, from+1).reverse();
+    buildJourney(pickLine, seq, label);
+    closePicker();
+    stop(); play();
+  }
+
+  /* ── 역 탭: 강남 중심 정적 타임라인 ── */
+  (function(){
+    const track=byId('stationTrack'), tY=60, GREEN='#00a84f';
+    const names=['서초','교대','강남','역삼','선릉'], n=names.length, center=2;
+    names.forEach((name,i)=>{
+      const frac=i/(n-1);
+      const dot=document.createElement('div'); dot.className='dot'+(i===center?' center':''); dot.style.top=(tY+2)+'px';
+      if(i===center) dot.style.background=GREEN; else dot.style.borderColor=GREEN; setX(dot,frac);
+      const label=document.createElement('div'); label.className='slabel'+(i===center?' center':''); label.textContent=name; label.style.top=(tY+13)+'px';
+      if(i===center) label.style.color=GREEN; setX(label,frac);
+      track.appendChild(dot); track.appendChild(label);
+    });
+    [{frac:0.34,num:'2416',forward:true},{frac:0.72,num:'2419',forward:false}].forEach(p=>{
+      const m=document.createElement('div'); m.className='marker'; m.style.top=(p.forward?tY+40:tY-26)+'px';
+      m.innerHTML=`<span class="tm" style="background:${GREEN}">${p.forward?p.num+' ▸':'◂ '+p.num}</span>`;
+      setX(m,p.frac); track.appendChild(m);
+    });
+  })();
+
+  /* ── 열차 탭: 선릉 중심 추적 타임라인 + 객차 ── */
+  (function(){
+    const track=byId('trainTrack'), tY=60, GREEN='#00a84f';
+    const names=['삼성','선릉','역삼'], n=names.length, center=1;
+    names.forEach((name,i)=>{
+      const frac=i/(n-1);
+      const dot=document.createElement('div'); dot.className='dot'+(i===center?' center':''); dot.style.top=(tY+2)+'px';
+      if(i===center) dot.style.background=GREEN; else dot.style.borderColor=GREEN; setX(dot,frac);
+      const label=document.createElement('div'); label.className='slabel'+(i===center?' center':''); label.textContent=name; label.style.top=(tY+13)+'px';
+      if(i===center) label.style.color=GREEN; setX(label,frac);
+      track.appendChild(dot); track.appendChild(label);
+    });
+    const m=document.createElement('div'); m.className='marker mine'; m.style.top=(tY+40)+'px';
+    m.innerHTML=`<span class="tm" style="background:${GREEN}">2418 ▸</span>`; setX(m,0.5); track.appendChild(m);
+    const row=byId('carRow');
+    for(let c=1;c<=10;c++){ const el=document.createElement('div'); el.className='car'+(c===4?' mine':''); if(c===4) el.style.background=GREEN; el.textContent=c; row.appendChild(el); }
+  })();
+
+  /* ── "N초 전 기준" 카운터 ── */
+  let ts=3, ss=6;
+  setInterval(()=>{
+    ts=ts>=19?0:ts+1; byId('trainUpdated').textContent=ts+'초 전 기준';
+    ss=ss>=19?0:ss+1; byId('stationUpdated').textContent=ss+'초 전 기준';
+  },1000);
+
+  /* ── 첫 화면: 2호선 시청 → 외선순환 여정을 바로 재생 ── */
+  buildJourney(byNo['2'], byNo['2'].stations.slice(), '외선순환');
+  play();
+</script>
+</body>
+</html>
