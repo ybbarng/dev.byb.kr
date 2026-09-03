@@ -362,8 +362,8 @@
   const journeyLabel = byId('journeyLabel');
   const TRACK_Y = 54, SPAN = 4;
 
-  let journey = null;   // {line, stations, color, base, dirLabel, frames}
-  let stationDots = [], myMarker = null, otherPool = [];
+  let journey = null;   // {line, stations, color, base, dirLabel, frames, forwardT, oncoming, tick, numSeq}
+  let stationDots = [], myMarker = null;
   let fi = 0, playing = false, timer = null;
 
   function buildJourney(line, stations, dirLabel){
@@ -388,12 +388,14 @@
     myMarker.innerHTML = `<span class="tm" style="background:${line.color}">${base+18} ▸</span>`;
     myMarker.style.top=(TRACK_Y+34)+'px';
     homeTrack.appendChild(myMarker); setX(myMarker,0.5);
-    otherPool = [];
 
-    // 맞은편 열차: 노선 위 고정 위치 → 나아가면 왼쪽으로 스쳐 지나간다
-    const oncoming = [];
-    for(let k=0;k<Math.ceil(stations.length/3)+1;k++) oncoming.push({progress:1.5+3*k, num:base+15+2*k});
-    const forwards = [{delta:1.4, num:base+16},{delta:-1.15, num:base+22}];
+    // 같은 방향 주변 열차(선 아래): 각자 다른 주기·진폭으로 앞뒤 간격이 늘었다 줄었다 한다.
+    // (내 열차 기준 상대 위치를 sin 으로 흔들어 "각자의 속도"처럼 보이게 — 내 열차를 추월하진 않는다.)
+    const forwardT = [
+      {base:+1.9, amp:0.85, freq:0.55, phase:0.0, num:base+16},
+      {base:-1.8, amp:0.95, freq:0.41, phase:1.7, num:base+22},
+      {base:+3.1, amp:0.70, freq:0.67, phase:3.0, num:base+8},
+    ];
 
     // 프레임(도착→출발→이동→접근)
     const frames=[];
@@ -406,41 +408,75 @@
     }
     frames.push({p:stations.length-1, msg:`${stations[stations.length-1]}역에 도착했습니다.`});
 
-    journey = {line, stations, color:line.color, base, dirLabel, frames, oncoming, forwards};
+    journey = {line, stations, color:line.color, base, dirLabel, frames, forwardT, oncoming:[], tick:0, numSeq:base+40};
+    seedOncoming(frames[0].p);
     fi = 0;
     renderHome(frames[0].p, frames[0].msg);
   }
 
+  // 맞은편 열차를 노선 앞쪽에 흩뿌린다. 각자 다른 속도로 다가와 왼쪽으로 스쳐 지나간다.
+  function seedOncoming(p0){
+    journey.oncoming = [];
+    for(let k=0;k<5;k++){
+      journey.oncoming.push({pos:p0 + 1.0 + 2.0*k, vel:-(0.27 + 0.03*(k%3)), num:journey.numSeq});
+      journey.numSeq += 2;
+    }
+  }
+  // 한 틱만큼 주변 열차를 움직인다(맞은편만 절대 위치로 이동, 화면 벗어나면 앞쪽에서 새로 등장).
+  function advanceTraffic(p){
+    journey.tick++;
+    journey.oncoming.forEach(o=>{
+      o.pos += o.vel;
+      if(o.pos - p < -4.8){ o.pos = p + 4.8 + Math.random()*1.6; o.num = journey.numSeq; journey.numSeq += 2; }
+    });
+  }
+
   function renderHome(progress, msg){
     homeStatus.textContent = msg;
-    const {stations, color, oncoming, forwards} = journey;
+    const color = journey.color;
     stationDots.forEach((s,i)=>{
       const frac = 0.5 + (i-progress)/SPAN;
       const vis = frac>=-0.45 && frac<=1.45;
       s.dot.style.display = s.label.style.display = vis?'block':'none';
       if(vis){ setX(s.dot,frac); setX(s.label,frac); }
     });
-    const others=[];
-    forwards.forEach(f=> others.push({frac:0.5+(f.delta)/SPAN, num:f.num, forward:true}));
-    oncoming.forEach(o=>{ const frac=0.5+(o.progress-progress)/SPAN; if(frac>=-0.45&&frac<=1.45) others.push({frac,num:o.num,forward:false}); });
-    while(otherPool.length<others.length){
-      const m=document.createElement('div'); m.className='marker other';
-      m.innerHTML='<span class="tm"></span>'; homeTrack.appendChild(m); otherPool.push(m);
-    }
-    otherPool.forEach((m,i)=>{
-      const o=others[i];
-      if(!o){ m.style.display='none'; return; }
-      m.style.display='block';
-      m.style.top=(o.forward?TRACK_Y+38:TRACK_Y-24)+'px';
-      const tm=m.querySelector('.tm');
-      tm.style.background = hexA(color, 0.58);
-      tm.textContent = o.forward?`${o.num} ▸`:`◂ ${o.num}`;
-      setX(m,o.frac);
+    // 같은 방향(선 아래): 각자 다른 주기로 앞뒤 거리가 출렁인다.
+    journey.forwardT.forEach(f=>{
+      const off = f.base + f.amp*Math.sin(journey.tick*f.freq + f.phase);
+      placeOther(f, 0.5 + off/SPAN, true, color);
     });
+    // 맞은편(선 위): 자기 속도로 흘러 지나간다.
+    journey.oncoming.forEach(o=>{
+      placeOther(o, 0.5 + (o.pos-progress)/SPAN, false, color);
+    });
+  }
+  // 열차 하나를 자기 DOM(train._el)에 그린다. 화면 밖이면 숨기고, 다시 나타날 땐 슬라이드 없이 제자리에 둔다.
+  function placeOther(train, frac, forward, color){
+    const vis = frac>=-0.45 && frac<=1.45;
+    let el = train._el;
+    if(!vis){ if(el) el.style.display='none'; return; }
+    const wasHidden = !el || el.style.display==='none';
+    if(!el){
+      el = document.createElement('div'); el.className='marker other';
+      el.innerHTML='<span class="tm"></span>'; homeTrack.appendChild(el); train._el=el;
+    }
+    el.style.display='block';
+    el.style.top=(forward?TRACK_Y+38:TRACK_Y-24)+'px';
+    const tm=el.querySelector('.tm');
+    tm.style.background = hexA(color, 0.58);
+    tm.textContent = forward?`${train.num} ▸`:`◂ ${train.num}`;
+    if(wasHidden){ el.style.transition='none'; setX(el,frac); void el.offsetWidth; el.style.transition=''; }
+    else setX(el,frac);
   }
   function hexA(hex,a){ const n=parseInt(hex.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
 
-  function tick(){ const f=journey.frames[fi]; renderHome(f.p,f.msg); fi=(fi+1)%journey.frames.length; }
+  function tick(){
+    if(fi===0) seedOncoming(journey.frames[0].p);
+    const f=journey.frames[fi];
+    advanceTraffic(f.p);
+    renderHome(f.p,f.msg);
+    fi=(fi+1)%journey.frames.length;
+  }
   function play(){ if(timer||!journey) return; playing=true; syncScan(); tick(); timer=setInterval(tick,2200); }
   function stop(){ clearInterval(timer); timer=null; playing=false; syncScan(); }
   function syncScan(){
