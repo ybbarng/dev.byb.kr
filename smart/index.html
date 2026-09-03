@@ -96,7 +96,8 @@
     padding:0 28px;}
 
   /* 스캔 버튼(홈) */
-  .scanwrap{position:absolute; left:0; right:0; bottom:20px; display:flex; justify-content:center; pointer-events:none;}
+  /* nav(64px) 위로 띄운다 — 겹치지 않게 */
+  .scanwrap{position:absolute; left:0; right:0; bottom:80px; display:flex; justify-content:center; pointer-events:none;}
   .scanbtn{pointer-events:auto; display:inline-flex; align-items:center; gap:8px; cursor:pointer;
     padding:13px 22px; border-radius:28px; font-size:15px; font-weight:700; border:none;
     box-shadow:0 4px 14px rgba(0,0,0,.4); transition:.15s; user-select:none;}
