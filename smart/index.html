@@ -191,7 +191,7 @@
       <path d="M43 40 l5 3 -5 3 z" fill="#0d0f10"/>
     </svg>
     <h1>smart</h1>
-    <p class="sub">BLE 비콘으로 <b>탑승한 지하철을 감지</b>해, 지금 어디를 지나는지 폰·워치로 실시간으로 알려주던 안드로이드 앱. 아래에서 <b>호선·역·방향을 골라</b> 실제 탑승 화면을 돌려볼 수 있습니다.</p>
+    <p class="sub"><b>스마트</b>워치가 지금 탑승한 열차 정보를 <b>스마트</b>하게 알려주는 앱. BLE 비콘으로 <b>탑승한 지하철을 감지</b>해, 지금 어디를 지나는지 폰·워치로 실시간으로 알려줍니다.</p>
     <div class="badges">
       <span class="chip">🚇 지하철</span>
       <span class="chip">📡 BLE 비콘</span>
@@ -361,8 +361,10 @@
   const homeBadge = byId('homeBadge');
   const journeyLabel = byId('journeyLabel');
   const TRACK_Y = 54, SPAN = 4;
-  // 마커는 세로 중앙 정렬(translateY -50%). 레일 중심(TRACK_Y+2)에서 위·아래 같은 거리(±44)로 대칭 배치.
-  const MARK_BELOW = TRACK_Y + 46, MARK_ABOVE = TRACK_Y - 42;
+  // 마커는 세로 중앙 정렬(translateY -50%)이라 top 이 곧 중심 y. 값은 앱 HomeTrainTimeline 그대로:
+  // 같은 방향 박스 trackY+40(중심 +50)·내 열차 trackY+38(중심 +51≈+50), 맞은편 박스 trackY-28(중심 -18).
+  // 아래엔 역 이름 라벨이 있어 같은 방향이 더 내려가고 위(맞은편)는 레일에 가깝다(비대칭이 원본).
+  const MARK_BELOW = TRACK_Y + 50, MARK_ABOVE = TRACK_Y - 18;
 
   let journey = null;   // {line, stations, color, last, trains, mine, hold, spec}
   let stationDots = [], myMarker = null;
@@ -603,7 +605,8 @@
       track.appendChild(dot); track.appendChild(label);
     });
     [{frac:0.34,num:'2416',forward:true},{frac:0.72,num:'2419',forward:false}].forEach(p=>{
-      const m=document.createElement('div'); m.className='marker'; m.style.top=(p.forward?tY+46:tY-42)+'px';
+      // 앱 SubwayTimeline: 같은 방향 박스 tY+40(중심 +52), 맞은편 박스 tY-30(중심 -18).
+      const m=document.createElement('div'); m.className='marker'; m.style.top=(p.forward?tY+52:tY-18)+'px';
       m.innerHTML=`<span class="tm" style="background:${GREEN}">${p.forward?p.num+' ▸':'◂ '+p.num}</span>`;
       setX(m,p.frac); track.appendChild(m);
     });
@@ -621,7 +624,7 @@
       if(i===center) label.style.color=GREEN; setX(label,frac);
       track.appendChild(dot); track.appendChild(label);
     });
-    const m=document.createElement('div'); m.className='marker mine'; m.style.top=(tY+46)+'px';
+    const m=document.createElement('div'); m.className='marker mine'; m.style.top=(tY+52)+'px';
     m.innerHTML=`<span class="tm" style="background:${GREEN}">2418 ▸</span>`; setX(m,0.5); track.appendChild(m);
     const row=byId('carRow');
     for(let c=1;c<=10;c++){ const el=document.createElement('div'); el.className='car'+(c===4?' mine':''); if(c===4) el.style.background=GREEN; el.textContent=c; row.appendChild(el); }
