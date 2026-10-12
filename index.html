@@ -39,6 +39,11 @@
   .card-desc{color:var(--muted); font-size:13.5px; margin-top:8px;}
   .card-meta{color:#5c6b7d; font-size:12px; margin-top:14px; display:flex; gap:8px; align-items:center;}
   .card-go{margin-left:auto; color:var(--gold); font-weight:700;}
+  /* 링크가 둘인 카드: 카드 전체는 첫 링크, 저장소 링크만 따로 눌린다 */
+  .card.multi{position:relative;}
+  .card-cover{position:absolute; inset:0; border-radius:inherit;}
+  .card-sub{position:relative; z-index:1; color:var(--muted); font-weight:700; text-decoration:none;}
+  .card-sub:hover{color:var(--gold);}
   .empty{grid-column:1/-1; text-align:center; color:var(--muted); padding:40px 0;}
   footer{text-align:center; color:#5c6b7d; font-size:13px; padding:30px 0 50px; border-top:1px solid var(--line);}
   footer a{color:var(--muted);}
@@ -119,6 +124,12 @@
       desc:'마신 와인을 기록하고, WebGPU로 그린 3D 잔과 산지 지도로 다시 보는 개인 와인 아카이브입니다.',
       meta:'2026년 8월',
     },
+    {
+      href:'https://gh.byb.kr/sky-talk/', repo:'https://github.com/ybbarng/sky-talk', emoji:'✈️', tag:'archive',
+      title:'SkyTalk · 비행기 안 대화',
+      desc:'인터넷 없는 비행기에서 떨어져 앉은 두 사람이 블루투스와 기내 Wi-Fi로 대화하는 React Native 앱. 진짜 앱 코드를 그대로 돌리는 가상 폰 두 대 데모입니다.',
+      meta:'2026년 9월',
+    },
   ];
   const TAGLABEL = {lab:'🧪 Lab', toy:'🎮 Toy', game:'🕹️ Game', archive:'📦 Archive'};
   const grid = document.getElementById('grid');
@@ -127,6 +138,13 @@
     if(!list.length){ grid.innerHTML = '<div class="empty">아직 여기엔 없어요 — 곧 채워집니다 🌱</div>'; return; }
     grid.innerHTML = list.map(p=>{
       const ext = /^https?:/.test(p.href), gh = /github\.com/.test(p.href);
+      if(p.repo) return `<div class="card multi">
+        <a class="card-cover" href="${p.href}" target="_blank" rel="noopener" aria-label="${p.title}"></a>
+        <div class="card-top"><span class="card-emoji">${p.emoji}</span><span class="badge ${p.tag}">${TAGLABEL[p.tag]}</span></div>
+        <div class="card-title">${p.title}</div>
+        <div class="card-desc">${p.desc}</div>
+        <div class="card-meta"><span>${p.meta||''}</span><a class="card-sub" href="${p.repo}" target="_blank" rel="noopener">GitHub ↗</a><span class="card-go" style="margin-left:0">바로가기 ↗</span></div>
+      </div>`;
       return `<a class="card" href="${p.href}"${ext?' target="_blank" rel="noopener"':''}>
         <div class="card-top"><span class="card-emoji">${p.emoji}</span><span class="badge ${p.tag}">${TAGLABEL[p.tag]}</span></div>
         <div class="card-title">${p.title}</div>
